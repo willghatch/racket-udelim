@@ -5,6 +5,7 @@
  make-string-delim-readtable/wrap
  make-list-delim-readtable
  make-list-delim-readtable/wrap
+ stx-string->port
  )
 
 (require syntax/readerr)
@@ -105,6 +106,18 @@
 (define make-list-delim-readtable/wrap
   (make-make-delim-readtable/wrap make-list-reader/wrap))
 
+(define (stx-string->port stx)
+  (let ([str (syntax->datum stx)]
+        [line (syntax-line stx)]
+        [col (syntax-column stx)]
+        [pos (syntax-position stx)]
+        [src (syntax-source stx)])
+    (if (not (string? str))
+        (error 'stx-string->port "syntax is not a string: ~a~n" stx)
+        (let ([p (open-input-string str src)])
+          (port-count-lines! p)
+          (set-port-next-location! p line col pos)
+          p))))
 
 (module+ test
   (require rackunit)
