@@ -9,13 +9,13 @@
 
   (define udelim-table
     (make-list-delim-readtable/wrap
-     #\🌜 #\🌛 '#%moon-face
+     #\🌜 #\🌛 '#%moon-faces
      #:base-readtable
      (make-list-delim-readtable/wrap
-      #\⦕ #\⦖ '#%double-inequality-bracket
+      #\⦕ #\⦖ '#%double-inequality-brackets
       #:base-readtable
       (make-list-delim-readtable/wrap
-       #\⦓ #\⦔ '#%inequality-bracket
+       #\⦓ #\⦔ '#%inequality-brackets
        #:base-readtable
        (make-list-delim-readtable/wrap
         #\﴾ #\﴿ '#%ornate-parens

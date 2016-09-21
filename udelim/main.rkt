@@ -1,12 +1,18 @@
 #lang racket/base
 
+(require racket/contract/base)
 (provide
- make-string-delim-readtable
- make-string-delim-readtable/wrap
- make-list-delim-readtable
- make-list-delim-readtable/wrap
- stx-string->port
- )
+ (contract-out
+  [make-string-delim-readtable
+   (->* (char? char?) (#:base-readtable readtable?) readtable?)]
+  [make-string-delim-readtable/wrap
+   (->* (char? char? symbol?) (#:base-readtable readtable?) readtable?)]
+  [make-list-delim-readtable
+   (->* (char? char?) (#:base-readtable readtable?) readtable?)]
+  [make-list-delim-readtable/wrap
+   (->* (char? char? symbol?) (#:base-readtable readtable?) readtable?)]
+  [stx-string->port (->* (syntax?) input-port?)]
+  ))
 
 (require syntax/readerr)
 
