@@ -9,15 +9,24 @@
 
   (define udelim-table
     (make-list-delim-readtable/wrap
-     #\﴾ #\﴿ '#%ornate-parens
+     #\🌜 #\🌛 '#%moon-face
      #:base-readtable
      (make-list-delim-readtable/wrap
-      #\⸨ #\⸩ '#%double-parens
+      #\⦕ #\⦖ '#%double-inequality-bracket
       #:base-readtable
-      (make-string-delim-readtable
-       #\“ #\”
+      (make-list-delim-readtable/wrap
+       #\⦓ #\⦔ '#%inequality-bracket
        #:base-readtable
-       (make-string-delim-readtable #\« #\»)))))
+       (make-list-delim-readtable/wrap
+        #\﴾ #\﴿ '#%ornate-parens
+        #:base-readtable
+        (make-list-delim-readtable/wrap
+         #\⸨ #\⸩ '#%double-parens
+         #:base-readtable
+         (make-string-delim-readtable
+          #\“ #\”
+          #:base-readtable
+          (make-string-delim-readtable #\« #\»))))))))
   (define (wrap-reader p)
     (lambda args
       (parameterize ([current-readtable udelim-table])
