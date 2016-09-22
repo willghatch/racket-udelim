@@ -36,17 +36,19 @@
     (make-meta-reader
      'udelim
      "language path"
-     lang-reader-module-paths
+     ;lang-reader-module-paths
+     (lambda (bstr)
+       (let* ([str (bytes->string/latin-1 bstr)]
+              [sym (string->symbol str)])
+         (and (module-path? sym)
+              (vector
+               ;; try submod first:
+               `(submod ,sym reader)
+               ;; fall back to /lang/reader:
+               (string->symbol (string-append str "/lang/reader"))))))
+
      wrap-reader
-     (lambda (orig-read-syntax)
-       (define read-syntax (wrap-reader orig-read-syntax))
-       (lambda args
-         (define stx (apply read-syntax args))
-         ;(define old-prop (syntax-property stx 'module-language))
-         ;(define new-prop `#(at-exp/lang/language-info get-language-info ,old-prop))
-         ;(syntax-property stx 'module-language new-prop)
-         stx
-         ))
+     wrap-reader
      (lambda (proc) proc)
      #;(lambda (proc)
        (lambda (key defval)
