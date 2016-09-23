@@ -34,9 +34,10 @@
        (define-values (n-line n-col n-pos) (port-next-location port))
        (define (loop ch cur-balance-level ch-so-far)
          (cond [(equal? eof ch)
-                (error 'string-reader
-                       "unexpected eof, expected ~n more ~a characters"
-                       cur-balance-level r-paren)]
+                (raise-read-error
+                 (format "unexpected eof, expected ~a more closing delimiter ~a~n"
+                         cur-balance-level r-paren)
+                 src line col pos #f)]
                [(equal? ch l-paren) (loop (read-char port)
                                             (add1 cur-balance-level)
                                             (cons ch ch-so-far))]
@@ -46,6 +47,7 @@
                [(> cur-balance-level 1) (loop (read-char port)
                                               (sub1 cur-balance-level)
                                               (cons ch ch-so-far))]
+               ;; this shouldn't be possible... but I'll leave it here anyway.
                [(< cur-balance-level 1)
                 ((make-raise-balance-error l-paren r-paren)
                  src line col pos)]
