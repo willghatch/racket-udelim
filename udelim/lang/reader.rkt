@@ -23,8 +23,8 @@
         (make-list-delim-readtable/wrap
          #\⸨ #\⸩ '#%double-parens
          #:base-readtable
-         (make-string-delim-readtable
-          #\“ #\”
+         (make-string-delim-readtable/wrap
+          #\｢ #\｣ '#%cjk-corner-quotes
           #:base-readtable
           (make-string-delim-readtable #\« #\»))))))))
   (define (wrap-reader p)
