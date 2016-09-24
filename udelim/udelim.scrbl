@@ -71,8 +71,10 @@ In addition to simply being a nice additional option to make literal strings, it
           (require udelim)
           (parameterize ([current-readtable (make-string-delim-readtable #\« #\»)])
             (read
-             (open-input-string
-              "«this is a string with nested «string delimiters.»  No \n escape interpreting.»")))]
+             (open-input-string #<<EOS
+«this is a string with nested «string delimiters.»  No \n escape interpreting.»
+EOS
+             )))]
 }
 
 @defproc[(make-string-delim-readtable/wrap
@@ -88,8 +90,10 @@ Like @racket[make-string-delim-readtable], except that the result will be wrappe
           (parameterize ([current-readtable
                           (make-string-delim-readtable/wrap #\« #\» '#%guillemets)])
             (read
-             (open-input-string
-              "«this is a string with nested «string delimiters.»  No \n escape interpreting.»")))]
+             (open-input-string #<<EOS
+«this is a string with nested «string delimiters.»  No \n escape interpreting.»
+EOS
+             )))]
 }
 
 @defproc[(stx-string->port [stx syntax?]) input-port?]{
