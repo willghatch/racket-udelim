@@ -16,7 +16,7 @@ Don't consider this library to be stable right now.  Particularly the udelim met
 @section{Guide}
 This is a library I wrote primarily to help make nestable embedding of different syntax in #lang rash, but is generally useful for adding extra types of parenthesis or string delimiters to a language.  After watching Jay McCarthy's talk at Sixth Racketcon, I also decided to steal his idea of making different types of parenthesis wrap their contents with an additional #%symbol.
 
-You can use the udelim meta-language (eg #lang udelim racket/base) to add a few extra parenthesis types and string types to any language.  Specifically, «» are nestable non-escaping string delimiters (IE «foo «bar»» reads as "foo «bar»"), ｢｣ are like «» but wrapped so ｢foo bar｣ produces (#%cjk-corner-quotes "foo bar"), ﴾foo bar﴿ reads as (#%ornate-parens foo bar), ⦓foo bar⦔ reads as (#%inequality-brackets foo bar), ⦕foo bar⦖ reads as (#%double-inequality-brackets foo bar), 🌜foo bar🌛 reads as (#%moon-faces foo bar), and ⟅foo bar⟆ reads as (#%s-shaped-bag-delim foo bar).  To get default meanings for the #% identifiers (currently just pass-through macros), use (require udelim/defaults).
+You can use the udelim meta-language (eg. #lang udelim racket/base) to essentially wrap your language's readtable with @racket[udelimify].
 
 @section{Reference}
 
@@ -94,6 +94,15 @@ Like @racket[make-string-delim-readtable], except that the result will be wrappe
 «this is a string with nested «string delimiters.»  No \n escape interpreting.»
 EOS
              )))]
+}
+
+@defproc[(udelimify [table (or/c readtable? false/c)]) readtable?]{
+Returns the readtable given, but extended with several more delimiters (the same ones as #lang udelim).
+
+Specifically:  «» are nestable non-escaping string delimiters (IE «foo «bar»» reads as "foo «bar»"), ｢｣ are like «» but wrapped so ｢foo bar｣ produces (#%cjk-corner-quotes "foo bar"), ﴾foo bar﴿ reads as (#%ornate-parens foo bar), ⦓foo bar⦔ reads as (#%inequality-brackets foo bar), ⦕foo bar⦖ reads as (#%double-inequality-brackets foo bar), 🌜foo bar🌛 reads as (#%moon-faces foo bar), and ⟅foo bar⟆ reads as (#%s-shaped-bag-delim foo bar).
+
+To get default meanings for the #% identifiers (currently just pass-through macros), use @code{(require udelim/defaults)}.
+
 }
 
 @defproc[(stx-string->port [stx syntax?]) input-port?]{

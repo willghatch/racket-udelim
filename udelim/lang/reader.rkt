@@ -3,36 +3,16 @@
            udelim
            )
 
-  (provide (rename-out [at-read read]
-                       [at-read-syntax read-syntax]
-                       [at-get-info get-info]))
+  (provide (rename-out [u-read read]
+                       [u-read-syntax read-syntax]
+                       [u-get-info get-info]))
 
-  (define udelim-table
-    (make-list-delim-readtable/wrap
-     #\🌜 #\🌛 '#%moon-faces
-     #:base-readtable
-     (make-list-delim-readtable/wrap
-      #\⦕ #\⦖ '#%double-inequality-brackets
-      #:base-readtable
-      (make-list-delim-readtable/wrap
-       #\⦓ #\⦔ '#%inequality-brackets
-       #:base-readtable
-       (make-list-delim-readtable/wrap
-        #\﴾ #\﴿ '#%ornate-parens
-        #:base-readtable
-        (make-list-delim-readtable/wrap
-         #\⟅ #\⟆ '#%s-shaped-bag-delim
-         #:base-readtable
-         (make-string-delim-readtable/wrap
-          #\｢ #\｣ '#%cjk-corner-quotes
-          #:base-readtable
-          (make-string-delim-readtable #\« #\»))))))))
   (define (wrap-reader p)
     (lambda args
-      (parameterize ([current-readtable udelim-table])
+      (parameterize ([current-readtable (udelimify (current-readtable))])
         (apply p args))))
 
-  (define-values (at-read at-read-syntax at-get-info)
+  (define-values (u-read u-read-syntax u-get-info)
     (make-meta-reader
      'udelim
      "language path"

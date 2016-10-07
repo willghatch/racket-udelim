@@ -11,6 +11,7 @@
    (->* (char? char?) (#:base-readtable readtable?) readtable?)]
   [make-list-delim-readtable/wrap
    (->* (char? char? symbol?) (#:base-readtable readtable?) readtable?)]
+  [udelimify (->* ((or/c readtable? false/c)) readtable?)]
   [stx-string->port (->* (syntax?) input-port?)]
   [scribble-strings->string (->* (syntax?) syntax?)]
   ))
@@ -114,6 +115,29 @@
   (make-make-delim-readtable/wrap make-string-reader/wrap))
 (define make-list-delim-readtable/wrap
   (make-make-delim-readtable/wrap make-list-reader/wrap))
+
+(define (udelimify table)
+  (make-list-delim-readtable/wrap
+   #\🌜 #\🌛 '#%moon-faces
+   #:base-readtable
+   (make-list-delim-readtable/wrap
+    #\⦕ #\⦖ '#%double-inequality-brackets
+    #:base-readtable
+    (make-list-delim-readtable/wrap
+     #\⦓ #\⦔ '#%inequality-brackets
+     #:base-readtable
+     (make-list-delim-readtable/wrap
+      #\﴾ #\﴿ '#%ornate-parens
+      #:base-readtable
+      (make-list-delim-readtable/wrap
+       #\⟅ #\⟆ '#%s-shaped-bag-delim
+       #:base-readtable
+       (make-string-delim-readtable/wrap
+        #\｢ #\｣ '#%cjk-corner-quotes
+        #:base-readtable
+        (make-string-delim-readtable
+         #\« #\»
+         #:base-readtable table))))))))
 
 (define (stx-string->port stx)
   (let ([str (syntax->datum stx)]
