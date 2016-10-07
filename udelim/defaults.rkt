@@ -24,5 +24,8 @@
 (define-syntax (pass-through-one stx)
   (syntax-case stx ()
     [(ptm e) #'e]))
-(define-syntax #%cjk-corner-quotes (make-rename-transformer #'pass-through-one))
+;(define-syntax (#%cjk-corner-quotes) (make-rename-transformer #'pass-through-one))
+(define-syntax (#%cjk-corner-quotes stx)
+  (syntax-case stx ()
+    [(ccq str) #'(pregexp str)]))
 

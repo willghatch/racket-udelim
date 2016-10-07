@@ -74,7 +74,21 @@ In addition to simply being a nice additional option to make literal strings, it
              (open-input-string #<<EOS
 «this is a string with nested «string delimiters.»  No \n escape interpreting.»
 EOS
-             )))]
+             )))
+          ]
+
+It's great for regexps:
+@codeblock{
+    (regexp-match (pregexp "\\w*\\.+\\s\\d+\\w*") "foo.. 97bar")
+    (regexp-match (pregexp «\w*\.+\s\d+\w*») "foo.. 97bar")
+}
+
+It's great for using macros that embed code in another syntax:
+@codeblock{
+    (format "I am ~a, these files are here:~n~a!!!"
+            (rash/trim "whoami")
+            (rash/out «ls -a $(rash/trim «pwd»)»))
+}
 }
 
 @defproc[(make-string-delim-readtable/wrap
@@ -83,15 +97,15 @@ EOS
 [wrapper-sym symbol?]
 [#:base-readtable base-readtable readtable? #f])
 readtable?]{
-Like @racket[make-string-delim-readtable], except that the result will be wrapped in a form with @racket[wrapper-sym].  This makes it easy to use @racket[make-rename-transformer] to make #%guillemets an alias for your string-reading macro, allowing you to invoke it implicitly with strings wrapped in «».
+Like @racket[make-string-delim-readtable], except that the result will be wrapped in a form with @racket[wrapper-sym].  This makes it easy to use @racket[make-rename-transformer] to make #%cjk-corner-quotes an alias for your string-reading macro, allowing you to invoke it implicitly with strings wrapped in ｢｣.
 
 @examples[#:eval my-evaluator
           (require udelim)
           (parameterize ([current-readtable
-                          (make-string-delim-readtable/wrap #\« #\» '#%guillemets)])
+                          (make-string-delim-readtable/wrap #\｢ #\｣ '#%cjk-corner-quotes)])
             (read
              (open-input-string #<<EOS
-«this is a string with nested «string delimiters.»  No \n escape interpreting.»
+｢this is a string with nested ｢string delimiters.｣  No \n escape interpreting.｣
 EOS
              )))]
 }
@@ -101,7 +115,7 @@ Returns the readtable given, but extended with several more delimiters (the same
 
 Specifically:  «» are nestable non-escaping string delimiters (IE «foo «bar»» reads as "foo «bar»"), ｢｣ are like «» but wrapped so ｢foo bar｣ produces (#%cjk-corner-quotes "foo bar"), ﴾foo bar﴿ reads as (#%ornate-parens foo bar), ⦓foo bar⦔ reads as (#%inequality-brackets foo bar), ⦕foo bar⦖ reads as (#%double-inequality-brackets foo bar), 🌜foo bar🌛 reads as (#%moon-faces foo bar), and ⟅foo bar⟆ reads as (#%s-shaped-bag-delim foo bar).
 
-To get default meanings for the #% identifiers (currently just pass-through macros), use @code{(require udelim/defaults)}.
+To get default meanings for the #% identifiers (currently mostly pass-through macros), use @code{(require udelim/defaults)}.  The only one that has a non-passthrough default is #%cjk-corner-quotes (given by ｢｣, defaults to @racket[pregexp]).
 
 }
 
