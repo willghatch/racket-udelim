@@ -12,6 +12,7 @@
   [make-list-delim-readtable/wrap
    (->* (char? char? symbol?) (#:base-readtable readtable?) readtable?)]
   [stx-string->port (->* (syntax?) input-port?)]
+  [scribble-strings->string (->* (syntax?) syntax?)]
   ))
 
 (require syntax/readerr)
@@ -126,6 +127,46 @@
           (port-count-lines! p)
           (set-port-next-location! p line col pos)
           p))))
+
+(define (reconstitute-scribble-strings stx)
+  ;; Based on `verb` macro in reader-internals docs.
+  ;; If there is a newline after the opening brace, it doesn't
+  ;; seem to show up, still.  Oh well.
+  (syntax-case stx ()
+    [(item ...)
+     (datum->syntax
+      stx
+      (let loop ([items (syntax->list #'(item ...))])
+        (if (null? items)
+            '()
+            (let* ([fst  (car items)]
+                   [prop (syntax-property fst 'scribble)]
+                   [rst  (loop (cdr items))])
+              (cond [(not prop) (cons fst rst)]
+                    [(eq? prop 'indentation) rst]
+                    [(not (and (pair? prop)
+                               (eq? (car prop) 'newline)))
+                     (cons fst rst)]
+                    [else (cons (datum->syntax
+                                 fst (cadr prop) fst)
+                                rst)])))))]))
+
+(define (scribble-strings->string stx)
+  (syntax-case stx ()
+    [(arg ...)
+     (let* ([error-if-not-str (λ (s) (or (string? (syntax->datum s))
+                                         (raise-syntax-error 'scribble-strings->string
+                                                             "expected string"
+                                                             s)))]
+            [all-strs? (map error-if-not-str (syntax->list stx))]
+            [one-str (apply string-append
+                            (map syntax->datum
+                                 (syntax->list
+                                  (reconstitute-scribble-strings #'(arg ...)))))]
+            [s (car (syntax->list #'(arg ...)))]
+            [loclist (list (syntax-source s) (syntax-line s) (syntax-column s)
+                           (syntax-position s) (string-length one-str))])
+       (datum->syntax s one-str loclist))]))
 
 (module+ test
   (require rackunit)

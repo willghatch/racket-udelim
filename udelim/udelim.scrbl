@@ -109,6 +109,38 @@ When you use @racket[read-syntax] on the resulting port, the syntax objects will
 
 }
 
+@defproc[(scribble-strings->string [stx syntax?]) syntax?]{
+Takes a syntax object that represents a list of strings created by the scribble reader, and reconstitutes them into one string.  If the syntax contains anything that is not a string, it raises an error.
+
+This makes it easier for a sub-parsing macro to accept input either from the scribble reader or from a string (including the wonderful verbatim strings with nestable delimiters made with @racket[make-string-delim-readtable]).
+
+Example:
+@codeblock{
+(require (for-syntax udelim syntax/strip-context syntax/parse))
+
+;; this function likely exists somewhere...
+(define-for-syntax (read-syntax* src in)
+  (define (rec rlist)
+    (let ([part (read-syntax src in)])
+      (if (eof-object? part)
+          (reverse rlist)
+          (rec (cons part rlist)))))
+  (rec '()))
+
+(define-syntax (subparse stx)
+  (syntax-parse stx
+    [(subparse arg:str)
+     (with-syntax ([(parg ...) (map (λ (s) (replace-context #'arg s))
+                                     (read-syntax* (syntax-source #'arg)
+                                                   (stx-string->port #'arg)))])
+       #'(begin parg ...))]
+    [(subparse arg:str ...+)
+     (with-syntax ([one-str (scribble-strings->string #'(arg ...))])
+       #'(subparse one-str))]))
+}
+
+}
+
 @section{Code and License}
 
 The code is available
