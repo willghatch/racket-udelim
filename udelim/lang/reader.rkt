@@ -21,7 +21,7 @@
         #\﴾ #\﴿ '#%ornate-parens
         #:base-readtable
         (make-list-delim-readtable/wrap
-         #\⸨ #\⸩ '#%double-parens
+         #\⟅ #\⟆ '#%s-shaped-bag-delim
          #:base-readtable
          (make-string-delim-readtable/wrap
           #\｢ #\｣ '#%cjk-corner-quotes
