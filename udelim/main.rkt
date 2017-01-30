@@ -69,10 +69,16 @@
       [(ch port src line col pos)
        (define (loop stxs-rev)
          (let ([next-ch (read-char port)])
-           (if (equal? next-ch r-paren)
-               (datum->syntax #f (reverse stxs-rev))
-               (let ([one-stx (read-syntax/recursive src port next-ch)])
-                 (loop (cons one-stx stxs-rev))))))
+           (cond
+             #| TODO - what if one of these whitespace characters is bound
+             to something non-default in the readtable??  For now, just ignore
+             them. |#
+             [(member next-ch '(#\space #\tab #\newline #\vtab #\return))
+              (loop stxs-rev)]
+             [(equal? next-ch r-paren)
+              (datum->syntax #f (reverse stxs-rev))]
+             [else (let ([one-stx (read-syntax/recursive src port next-ch)])
+                     (loop (cons one-stx stxs-rev)))])))
        (loop '())]))
   paren-reader)
 
