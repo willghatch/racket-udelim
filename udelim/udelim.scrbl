@@ -30,40 +30,53 @@ You can use the udelim meta-language (eg. #lang udelim racket/base) to essential
 @defproc[(make-list-delim-readtable
 [l-paren char?]
 [r-paren char?]
-[#:base-readtable base-readtable readtable? #f])
+[#:base-readtable base-readtable readtable? #f]
+[#:wrapper wrapper (or/c false/c symbol?) #f]
+[#:inside-readtable inside-readtable any/c? #f])
 readtable?]{
-Returns a new readtable based on @racket[base-readtable] that uses @racket[l-paren] and @racket[r-paren] like parenthesis.  IE they read into a list.
+Returns a new readtable based on @racket[base-readtable] that uses @racket[l-paren] and @racket[r-paren] like parenthesis.  IE they read into a list.  If @racket[wrapper] is supplied with a symbol, it is placed at the head of the list.  If @racket[inside-readtable] is a readtable (including #f), then that readtable is used for the inside of the list.
 
 @examples[#:eval my-evaluator
           (require udelim)
           (parameterize ([current-readtable (make-list-delim-readtable #\⟦ #\⟧)])
             (read
-             (open-input-string "(a b ⟦c d e ⟦f g⟧ h i⟧ j k)")))]
-}
+             (open-input-string "(a b ⟦c d e ⟦f g⟧ h i⟧ j k)")))
+          (parameterize ([current-readtable
+                         (make-list-delim-readtable #\⟦ #\⟧ #:wrapper '#%white-brackets)])
+            (read
+             (open-input-string "(a b ⟦c d e ⟦f g⟧ h i⟧ j k)")))
+          (parameterize ([current-readtable
+                         (make-list-delim-readtable #\⟦ #\⟧
+                         #:wrapper '#%white-brackets
+                         #:inside-readtable (make-list-delim-readtable #\⟦ #\⟧))])
+            (read
+             (open-input-string "(a b ⟦c d e ⟦f g⟧ h i⟧ j k)")))
+]
 
-@defproc[(make-list-delim-readtable/wrap
-[l-paren char?]
-[r-paren char?]
-[wrapper-sym symbol?]
-[#:base-readtable base-readtable readtable? #f])
-readtable?]{
-Like @racket[make-list-delim-readtable], except it puts @racket[wrapper-sym] at the head of the list.
+Be careful with @racket[inside-readtable] -- you can get potentially unexpected errors by switching the readtable inside a set of parenthesis.  Specifically, if the @racket[inside-readtable] does not treat the parens you are defining specially then you will need a space between any symbol and the closing parenthesis, or the reader will add that character to the symbol!  This is particularly visible if the @racket[inside-readtable] is the base (#f) readtable.  So it is recommended to only use an inside-readtable that has the same parenthesis extensions (though perhaps with more defined, or with other extensions).
 
 @examples[#:eval my-evaluator
           (require udelim)
-          (parameterize ([current-readtable
-                         (make-list-delim-readtable/wrap #\⟦ #\⟧ '#%white-brackets)])
+          "In this example the result is what we expect."
+          (parameterize ([current-readtable (make-list-delim-readtable #\⟦ #\⟧ #:inside-readtable #f)])
             (read
-             (open-input-string "(a b ⟦c d e ⟦f g⟧ h i⟧ j k)")))]
+             (open-input-string "(a b ⟦c d e ⟧ f g)")))
+          "In this example, the closing ⟧ will be read as part of a symbol, causing a strange error later!"
+          (parameterize ([current-readtable (make-list-delim-readtable #\⟦ #\⟧ #:inside-readtable #f)])
+            (read
+             (open-input-string "(a b ⟦c d e⟧ f g)")))
+]
+
 }
 
 
 @defproc[(make-string-delim-readtable
 [l-paren char?]
 [r-paren char?]
-[#:base-readtable base-readtable readtable? #f])
+[#:base-readtable base-readtable readtable? #f]
+[#:wrapper wrapper (or/c false/c symbol?) #f])
 readtable?]{
-Returns a new readtable based on @racket[base-readtable] that uses @racket[l-paren] and @racket[r-paren] as delimiters to a non-escapable string (with balanced internal delimiters).
+Returns a new readtable based on @racket[base-readtable] that uses @racket[l-paren] and @racket[r-paren] as delimiters to a non-escapable string (with balanced internal delimiters).  If @racket[wrapper] is provided, it wraps the string in an s-expression with that symbol at the head.
 
 In addition to simply being a nice additional option to make literal strings, it goes great with @racket[stx-string->port] to use in macros that read alternative syntax, such as are used in #lang rash.  Other things you might do are create macros that read interesting surface syntax for different data structures, list comprehensions, or common patterns that you use that would benefit from a different syntax.
 
@@ -75,7 +88,15 @@ In addition to simply being a nice additional option to make literal strings, it
 «this is a string with nested «string delimiters.»  No \n escape interpreting.»
 EOS
              )))
+          (parameterize ([current-readtable
+                          (make-string-delim-readtable #\｢ #\｣ #:wrapper '#%cjk-corner-quotes)])
+            (read
+             (open-input-string #<<EOS
+｢this is a string with nested ｢string delimiters.｣  No \n escape interpreting.｣
+EOS
+             )))
           ]
+
 
 It's great for regexps:
 @codeblock{
@@ -89,26 +110,10 @@ It's great for using macros that embed code in another syntax:
             (rash/trim "whoami")
             (rash/out «ls -a $(rash/trim «pwd»)»))
 }
+
+
 }
 
-@defproc[(make-string-delim-readtable/wrap
-[l-paren char?]
-[r-paren char?]
-[wrapper-sym symbol?]
-[#:base-readtable base-readtable readtable? #f])
-readtable?]{
-Like @racket[make-string-delim-readtable], except that the result will be wrapped in a form with @racket[wrapper-sym].  This makes it easy to use @racket[make-rename-transformer] to make #%cjk-corner-quotes an alias for your string-reading macro, allowing you to invoke it implicitly with strings wrapped in ｢｣.
-
-@examples[#:eval my-evaluator
-          (require udelim)
-          (parameterize ([current-readtable
-                          (make-string-delim-readtable/wrap #\｢ #\｣ '#%cjk-corner-quotes)])
-            (read
-             (open-input-string #<<EOS
-｢this is a string with nested ｢string delimiters.｣  No \n escape interpreting.｣
-EOS
-             )))]
-}
 
 @defproc[(udelimify [table (or/c readtable? false/c)]) readtable?]{
 Returns the readtable given, but extended with several more delimiters (the same ones as #lang udelim).
