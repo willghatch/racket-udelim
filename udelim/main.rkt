@@ -143,11 +143,23 @@
        #\⟅ #\⟆ #:wrapper '#%s-shaped-bag-delim
        #:base-readtable
        (make-string-delim-readtable
-        #\｢ #\｣ #:wrapper '#%cjk-corner-quotes
+        #\◸ #\◹ #:wrapper '#%upper-triangles
         #:base-readtable
         (make-string-delim-readtable
-         #\« #\»
-         #:base-readtable table))))))))
+         #\◺ #\◿ #:wrapper '#%lower-triangles
+         #:base-readtable
+         (make-string-delim-readtable
+          #\◤ #\◥ #:wrapper '#%full-upper-triangles
+          #:base-readtable
+          (make-string-delim-readtable
+           #\◣ #\◢ #:wrapper '#%full-lower-triangles
+           #:base-readtable
+           (make-string-delim-readtable
+            #\｢ #\｣ #:wrapper '#%cjk-corner-quotes
+            #:base-readtable
+            (make-string-delim-readtable
+             #\« #\»
+             #:base-readtable table))))))))))))
 
 (define (stx-string->port stx)
   (let ([str (syntax->datum stx)]
