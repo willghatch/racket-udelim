@@ -26,7 +26,7 @@
     (case-lambda
       [(ch port) (raise-balance-error ch port #f #f #f #f)]
       [(ch port src line col pos)
-       (raise-read-error (format "unexpected closing delimiter ~a~n" r-paren)
+       (raise-read-error (format "unexpected closing delimiter ~a\n" r-paren)
                          src line col pos #f)]))
   raise-balance-error)
 
@@ -40,7 +40,7 @@
        (define (loop ch cur-balance-level ch-so-far)
          (cond [(equal? eof ch)
                 (raise-read-error
-                 (format "unexpected eof, expected ~a more closing delimiter ~a~n"
+                 (format "unexpected eof, expected ~a more closing delimiter ~a\n"
                          cur-balance-level r-paren)
                  src line col pos #f)]
                [(equal? ch l-paren) (loop (read-char port)
@@ -168,7 +168,7 @@
         [pos (syntax-position stx)]
         [src (syntax-source stx)])
     (if (not (string? str))
-        (error 'stx-string->port "syntax is not a string: ~a~n" stx)
+        (error 'stx-string->port "syntax is not a string: ~a\n" stx)
         (let ([p (open-input-string str src)])
           (port-count-lines! p)
           (set-port-next-location! p line col pos)

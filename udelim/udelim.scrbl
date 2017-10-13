@@ -106,7 +106,7 @@ It's great for regexps:
 
 It's great for using macros that embed code in another syntax:
 @codeblock{
-    (format "I am ~a, these files are here:~n~a!!!"
+    (format "I am ~a, these files are here:\n~a!!!"
             (rash/trim "whoami")
             (rash/out «ls -a $(rash/trim «pwd»)»))
 }
