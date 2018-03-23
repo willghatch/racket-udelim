@@ -32,7 +32,7 @@ You can use the udelim meta-language (eg. #lang udelim racket/base) to essential
 [r-paren char?]
 [#:base-readtable base-readtable readtable? #f]
 [#:wrapper wrapper (or/c false/c symbol?) #f]
-[#:inside-readtable inside-readtable any/c? #f])
+[#:inside-readtable inside-readtable (or/c false/c readtable? 'inherit) 'inherit])
 readtable?]{
 Returns a new readtable based on @racket[base-readtable] that uses @racket[l-paren] and @racket[r-paren] like parenthesis.  IE they read into a list.  If @racket[wrapper] is supplied with a symbol, it is placed at the head of the list.  If @racket[inside-readtable] is a readtable (including #f), then that readtable is used for the inside of the list.
 

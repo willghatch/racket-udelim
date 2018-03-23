@@ -12,7 +12,7 @@
    (->* (char? char?)
         (#:base-readtable readtable?
          #:wrapper (or/c false/c symbol?)
-         #:inside-readtable any/c)
+         #:inside-readtable (or/c false/c readtable? 'inherit))
         readtable?)]
   [udelimify (->* ((or/c readtable? false/c)) readtable?)]
   [stx-string->port (->* (syntax?) input-port?)]
@@ -68,6 +68,8 @@
        (loop ch 0 '())]))
   string-reader)
 
+(define whitespace-list '(#\space #\tab #\newline #\vtab #\return))
+
 (define (make-list-reader l-paren r-paren
                           #:wrapper [wrapper #f]
                           #:inside-readtable [inside-readtable 'inherit])
@@ -76,12 +78,20 @@
       [(ch port) (syntax->datum (paren-reader ch port #f #f #f #f))]
       [(ch port src line col pos)
        (define (loop stxs-rev)
-         (let ([next-ch (read-char port)])
+         (let ([next-ch (read-char port)]
+               [inner-readtable (cond
+                                  [(readtable? inside-readtable)
+                                   inside-readtable]
+                                  [(not inside-readtable)
+                                   (make-readtable #f)]
+                                  [else (current-readtable)])])
            (cond
-             #| TODO - what if one of these whitespace characters is bound
-             to something non-default in the readtable??  For now, just ignore
-             them. |#
-             [(member next-ch '(#\space #\tab #\newline #\vtab #\return))
+             ;; Ignore whitespace, unless it is bound in the inner readtable.
+             [(and (member next-ch whitespace-list)
+                   (let-values ([(macro-type reader-proc dispatch-proc)
+                                 (readtable-mapping inner-readtable next-ch)])
+                     (member macro-type whitespace-list)))
+
               (loop stxs-rev)]
              [(equal? next-ch r-paren)
               (let ([unwrapped (reverse stxs-rev)])
@@ -90,17 +100,11 @@
                     (datum->syntax #f unwrapped)))]
              [else
               (let ([one-stx (parameterize
-                                      ([current-readtable
-                                        (cond
-                                          [(readtable? inside-readtable)
-                                           inside-readtable]
-                                          [(not inside-readtable)
-                                           #f]
-                                          [else (current-readtable)])])
-                                       (read-syntax/recursive src
-                                                              port
-                                                              next-ch))])
-                     (loop (cons one-stx stxs-rev)))])))
+                                 ([current-readtable inner-readtable])
+                               (read-syntax/recursive src
+                                                      port
+                                                      next-ch))])
+                (loop (cons one-stx stxs-rev)))])))
        (loop '())]))
   paren-reader)
 
@@ -282,5 +286,17 @@
     (let ([port (open-input-string "{testing {1 2 3}foo (testing)a ⌈b aoeu c⌉test d }")])
       (check-equal? (syntax->datum (read-syntax "t9" port))
                     '(testing (1 2 3) foo (testing) a (b aoeu c) test d))))
+
+  (define tab-table (make-list-delim-readtable
+                     #\{ #\} #:base-readtable (make-readtable #f #\tab #\a #f)))
+  (parameterize ([current-readtable tab-table])
+    (let ([port (open-input-string "(testing \tfoo \t {a b \t \tc} aoeu)")])
+      (check-equal? (syntax->datum (read-syntax "t10" port))
+                    `(testing ,(string->symbol "\tfoo")
+                              ,(string->symbol "\t")
+                              (a b
+                                 ,(string->symbol "\t")
+                                 ,(string->symbol "\tc"))
+                              aoeu))))
 
   )
