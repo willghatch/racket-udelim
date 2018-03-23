@@ -40,7 +40,7 @@
        (define (loop ch cur-balance-level ch-so-far)
          (cond [(equal? eof ch)
                 (raise-read-error
-                 (format "unexpected eof, expected ~a more closing delimiter ~a\n"
+                 (format "unexpected eof, expected ~a more of closing delimiter ~a\n"
                          cur-balance-level r-paren)
                  src line col pos #f)]
                [(equal? ch l-paren) (loop (read-char port)
@@ -54,7 +54,7 @@
                                               (cons ch ch-so-far))]
                ;; this shouldn't be possible... but I'll leave it here anyway.
                [(< cur-balance-level 1)
-                ((make-raise-balance-error l-paren r-paren)
+                ({make-raise-balance-error l-paren r-paren}
                  src line col pos)]
                [else
                 (let* ([final-chs (cdr (reverse ch-so-far))]
