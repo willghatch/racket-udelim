@@ -338,10 +338,11 @@
   (define inner-read-test-table2
     (make-string-delim-readtable
      #\⟅ #\⟆
+     #:wrapper 'test-wrap
      #:string-read-syntax (λ (src p) (string-upcase (port->string p)))
      #:whole-body-readers? #t))
   (parameterize ([current-readtable inner-read-test-table2])
     (let ([port (open-input-string "⟅this (is ⟅a read⟆) test⟆")])
       (check-equal? (syntax->datum (read-syntax "t12" port))
-                    "THIS (IS ⟅A READ⟆) TEST")))
+                    '(test-wrap "THIS (IS ⟅A READ⟆) TEST"))))
   )
