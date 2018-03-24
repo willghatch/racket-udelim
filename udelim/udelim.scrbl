@@ -74,11 +74,16 @@ Be careful with @racket[inside-readtable] -- you can get potentially unexpected 
 [l-paren char?]
 [r-paren char?]
 [#:base-readtable base-readtable readtable? #f]
-[#:wrapper wrapper (or/c false/c symbol?) #f])
+[#:wrapper wrapper (or/c false/c symbol?) #f]
+[#:string-read-syntax string-read-syntax (or/c false/c (-> any/c input-port? any/c)) #f]
+[#:whole-body-readers? whole-body-readers? any/c #f]
+)
 readtable?]{
 Returns a new readtable based on @racket[base-readtable] that uses @racket[l-paren] and @racket[r-paren] as delimiters to a non-escapable string (with balanced internal delimiters).  If @racket[wrapper] is provided, it wraps the string in an s-expression with that symbol at the head.
 
 In addition to simply being a nice additional option to make literal strings, it goes great with @racket[stx-string->port] to use in macros that read alternative syntax, such as are used in #lang rash.  Other things you might do are create macros that read interesting surface syntax for different data structures, list comprehensions, or common patterns that you use that would benefit from a different syntax.
+
+If @racket[string-read-syntax] is provided, then it will be applied to the string (transformed into a port with correct location info) to obtain a (probably non-string) syntax object.  If @racket[whole-body-readers?] is true, the function is applied just once to get a syntax object.  Otherwise, the reader is applied repeatedly until it produces an EOF object.  @racket[string-read-syntax] must be a function that could be used in place of @racket[read-syntax].  @racket[string-read-syntax] is essentially useful for making weird reader extensions where the extension is bounded by the closing delimiter.
 
 @examples[#:eval my-evaluator
           (require udelim)
@@ -106,9 +111,7 @@ It's great for regexps:
 
 It's great for using macros that embed code in another syntax:
 @codeblock{
-    (format "I am ~a, these files are here:\n~a!!!"
-            (rash/trim "whoami")
-            (rash/out «ls -a $(rash/trim «pwd»)»))
+    (rash «ls -l»)
 }
 
 

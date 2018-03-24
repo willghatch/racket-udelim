@@ -1,12 +1,18 @@
 #lang racket/base
 
-(require racket/contract/base)
+(require
+ racket/contract/base
+ racket/port
+ )
+
 (provide
  (contract-out
   [make-string-delim-readtable
    (->* (char? char?)
         (#:base-readtable readtable?
-         #:wrapper (or/c false/c symbol?))
+         #:wrapper (or/c false/c symbol?)
+         #:string-read-syntax (or/c false/c (-> any/c input-port? any/c))
+         #:whole-body-readers? any/c)
         readtable?)]
   [make-list-delim-readtable
    (->* (char? char?)
@@ -30,8 +36,21 @@
                          src line col pos #f)]))
   raise-balance-error)
 
-(define (make-string-reader l-paren r-paren #:wrapper [wrapper #f])
+(define (make-string-reader l-paren r-paren
+                            #:wrapper [wrapper #f]
+                            #:string-read-syntax [string-read-syntax #f]
+                            #:whole-body-readers? [whole-body-readers? #f])
   ;; balance parens, and return the contents as a bare string with no escapes
+
+  (define inner-read-syntax
+    (and string-read-syntax
+         (if whole-body-readers?
+             string-read-syntax
+             (λ (src port)
+               (datum->syntax
+                #f
+                (port->list (λ (p) (string-read-syntax src p))
+                            port))))))
   (define string-reader
     (case-lambda
       [(ch port) (syntax->datum (string-reader ch port #f #f #f #f))]
@@ -59,12 +78,16 @@
                [else
                 (let* ([final-chs (cdr (reverse ch-so-far))]
                        [span (length final-chs)]
-                       [unwrapped (datum->syntax
-                                   #f (apply string final-chs)
-                                   (list src n-line n-col n-pos span))])
+                       [str-stx (datum->syntax
+                                 #f (apply string final-chs)
+                                 (list src n-line n-col n-pos span))]
+                       [read-stx (if inner-read-syntax
+                                     (inner-read-syntax src
+                                                        (stx-string->port str-stx))
+                                     str-stx)])
                   (if wrapper
-                      (datum->syntax #f (list wrapper unwrapped))
-                      unwrapped))]))
+                      (datum->syntax #f (list wrapper read-stx))
+                      read-stx))]))
        (loop ch 0 '())]))
   string-reader)
 
@@ -112,10 +135,16 @@
 
 (define (make-string-delim-readtable l-paren r-paren
                                      #:base-readtable [base-readtable #f]
-                                     #:wrapper [wrapper #f])
+                                     #:wrapper [wrapper #f]
+                                     #:string-read-syntax [string-read-syntax #f]
+                                     #:whole-body-readers? [whole-body-readers? #f])
   (make-readtable
    base-readtable
-   l-paren 'terminating-macro (make-string-reader l-paren r-paren #:wrapper wrapper)
+   l-paren 'terminating-macro (make-string-reader
+                               l-paren r-paren
+                               #:wrapper wrapper
+                               #:string-read-syntax string-read-syntax
+                               #:whole-body-readers? whole-body-readers?)
    r-paren 'terminating-macro (make-raise-balance-error l-paren r-paren)))
 
 (define (make-list-delim-readtable l-paren r-paren
@@ -299,4 +328,20 @@
                                  ,(string->symbol "\tc"))
                               aoeu))))
 
+  (define inner-read-test-table1
+    (make-string-delim-readtable #\⟅ #\⟆ #:string-read-syntax read-syntax))
+  (parameterize ([current-readtable inner-read-test-table1])
+    (let ([port (open-input-string "⟅this (is ⟅a read⟆) test⟆")])
+      (check-equal? (syntax->datum (read-syntax "t11" port))
+                    '(this (is (a read)) test))))
+
+  (define inner-read-test-table2
+    (make-string-delim-readtable
+     #\⟅ #\⟆
+     #:string-read-syntax (λ (src p) (string-upcase (port->string p)))
+     #:whole-body-readers? #t))
+  (parameterize ([current-readtable inner-read-test-table2])
+    (let ([port (open-input-string "⟅this (is ⟅a read⟆) test⟆")])
+      (check-equal? (syntax->datum (read-syntax "t12" port))
+                    "THIS (IS ⟅A READ⟆) TEST")))
   )
