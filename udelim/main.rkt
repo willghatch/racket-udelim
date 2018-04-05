@@ -85,9 +85,8 @@
                                      (inner-read-syntax src
                                                         (stx-string->port str-stx))
                                      str-stx)])
-                  (if wrapper
-                      (datum->syntax #f (list wrapper read-stx))
-                      read-stx))]))
+                  (cond [(symbol? wrapper) (datum->syntax #f (list wrapper read-stx))]
+                        [else read-stx]))]))
        (loop ch 0 '())]))
   string-reader)
 
@@ -118,9 +117,8 @@
               (loop stxs-rev)]
              [(equal? next-ch r-paren)
               (let ([unwrapped (reverse stxs-rev)])
-                (if wrapper
-                    (datum->syntax #f (cons wrapper unwrapped))
-                    (datum->syntax #f unwrapped)))]
+                (cond [(symbol? wrapper) (datum->syntax #f (cons wrapper unwrapped))]
+                      [else (datum->syntax #f unwrapped)]))]
              [else
               (let ([one-stx (parameterize
                                  ([current-readtable inner-readtable])
