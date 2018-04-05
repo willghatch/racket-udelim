@@ -10,14 +10,14 @@
   [make-string-delim-readtable
    (->* (char? char?)
         (#:base-readtable readtable?
-         #:wrapper (or/c false/c symbol?)
+         #:wrapper (or/c false/c symbol? procedure?)
          #:string-read-syntax (or/c false/c (-> any/c input-port? any/c))
          #:whole-body-readers? any/c)
         readtable?)]
   [make-list-delim-readtable
    (->* (char? char?)
         (#:base-readtable readtable?
-         #:wrapper (or/c false/c symbol?)
+         #:wrapper (or/c false/c symbol? procedure?)
          #:inside-readtable (or/c false/c readtable? 'inherit))
         readtable?)]
   [udelimify (->* ((or/c readtable? false/c)) readtable?)]
@@ -86,6 +86,7 @@
                                                         (stx-string->port str-stx))
                                      str-stx)])
                   (cond [(symbol? wrapper) (datum->syntax #f (list wrapper read-stx))]
+                        [(procedure? wrapper) (wrapper read-stx)]
                         [else read-stx]))]))
        (loop ch 0 '())]))
   string-reader)
@@ -118,6 +119,7 @@
              [(equal? next-ch r-paren)
               (let ([unwrapped (reverse stxs-rev)])
                 (cond [(symbol? wrapper) (datum->syntax #f (cons wrapper unwrapped))]
+                      [(procedure? wrapper) (wrapper (datum->syntax #f unwrapped))]
                       [else (datum->syntax #f unwrapped)]))]
              [else
               (let ([one-stx (parameterize
@@ -249,10 +251,18 @@
   (require rackunit)
 
   (define mytable (make-string-delim-readtable #\{ #\}))
-  (define guillemet-table
+  (define guillemet-table/wrap
     (make-string-delim-readtable #\« #\» #:wrapper '#%guillemets))
+  (define guillemet-table/wrap2
+    (make-string-delim-readtable
+     #\« #\»
+     #:wrapper (λ (stx) (datum->syntax #f (list'#%guillemets2 stx)))))
   (define ceil-table (make-list-delim-readtable #\⌈ #\⌉))
   (define ceil-table/wrap (make-list-delim-readtable #\⌈ #\⌉ #:wrapper '#%ceil))
+  (define ceil-table/wrap2
+    (make-list-delim-readtable
+     #\⌈ #\⌉
+     #:wrapper (λ (stx) (datum->syntax #f (cons '#%ceil2 (syntax-e stx))))))
 
   (parameterize ([current-readtable mytable])
     (let ([port (open-input-string "  \"in a string {here\" {hello @{testing 123}foo} }goodbye")])
@@ -262,13 +272,21 @@
                     "hello @{testing 123}foo")
       (check-exn exn? (λ () (read-syntax "t1" port)))))
 
-  (parameterize ([current-readtable guillemet-table])
+  (parameterize ([current-readtable guillemet-table/wrap])
     (let ([port (open-input-string "  \"in a string «here\" «hello @«testing 123»foo» »goodbye")])
       (check-equal? (syntax->datum (read-syntax "t2" port))
                     "in a string «here")
       (check-equal? (syntax->datum (read-syntax "t2" port))
                     '(#%guillemets "hello @«testing 123»foo"))
       (check-exn exn? (λ () (read-syntax "t2" port)))))
+
+  (parameterize ([current-readtable guillemet-table/wrap2])
+    (let ([port (open-input-string "  \"in a string «here\" «hello @«testing 123»foo» »goodbye")])
+      (check-equal? (syntax->datum (read-syntax "t2-wrap2" port))
+                    "in a string «here")
+      (check-equal? (syntax->datum (read-syntax "t2-wrap2" port))
+                    '(#%guillemets2 "hello @«testing 123»foo"))
+      (check-exn exn? (λ () (read-syntax "t2-wrap2" port)))))
 
   (parameterize ([current-readtable ceil-table])
     (let ([port (open-input-string "{testing ⌈foo bar ⌈⌉ () aoeu⌉ hello} foo")])
@@ -287,6 +305,11 @@
     (let ([port (open-input-string "(testing ⌈foo bar ⌈⌉ () aoeu⌉ hello) foo")])
       (check-equal? (syntax->datum (read-syntax "t4" port))
                     '(testing (#%ceil foo bar (#%ceil) () aoeu) hello))))
+
+  (parameterize ([current-readtable ceil-table/wrap2])
+    (let ([port (open-input-string "(testing ⌈foo bar ⌈⌉ () aoeu⌉ hello) foo")])
+      (check-equal? (syntax->datum (read-syntax "t4-wrap2" port))
+                    '(testing (#%ceil2 foo bar (#%ceil2) () aoeu) hello))))
 
   (define weird-table (make-list-delim-readtable #\{ #\} #:inside-readtable mytable))
   (parameterize ([current-readtable weird-table])

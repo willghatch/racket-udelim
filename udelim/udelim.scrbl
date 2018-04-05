@@ -31,10 +31,10 @@ You can use the udelim meta-language (eg. #lang udelim racket/base) to essential
 [l-paren char?]
 [r-paren char?]
 [#:base-readtable base-readtable readtable? #f]
-[#:wrapper wrapper (or/c false/c symbol?) #f]
+[#:wrapper wrapper (or/c false/c symbol? procedure?) #f]
 [#:inside-readtable inside-readtable (or/c false/c readtable? 'inherit) 'inherit])
 readtable?]{
-Returns a new readtable based on @racket[base-readtable] that uses @racket[l-paren] and @racket[r-paren] like parenthesis.  IE they read into a list.  If @racket[wrapper] is supplied with a symbol, it is placed at the head of the list.  If @racket[inside-readtable] is a readtable (including #f), then that readtable is used for the inside of the list.
+Returns a new readtable based on @racket[base-readtable] that uses @racket[l-paren] and @racket[r-paren] like parenthesis.  IE they read into a list.  If @racket[wrapper] is supplied with a symbol, it is placed at the head of the list.  If @racket[wrapper] is a function, it will be applied to the syntax object result of reading (the argument will be a syntax object whether @racket[read] or @racket[read-syntax] is used -- the result of @racket[read] is created by using @racket[syntax->datum] on the result of @racket[read-syntax]).  If @racket[inside-readtable] is a readtable (including #f), then that readtable is used for the inside of the list.
 
 @examples[#:eval my-evaluator
           (require udelim)
@@ -74,12 +74,12 @@ Be careful with @racket[inside-readtable] -- you can get potentially unexpected 
 [l-paren char?]
 [r-paren char?]
 [#:base-readtable base-readtable readtable? #f]
-[#:wrapper wrapper (or/c false/c symbol?) #f]
+[#:wrapper wrapper (or/c false/c symbol? procedure?) #f]
 [#:string-read-syntax string-read-syntax (or/c false/c (-> any/c input-port? any/c)) #f]
 [#:whole-body-readers? whole-body-readers? any/c #f]
 )
 readtable?]{
-Returns a new readtable based on @racket[base-readtable] that uses @racket[l-paren] and @racket[r-paren] as delimiters to a non-escapable string (with balanced internal delimiters).  If @racket[wrapper] is provided, it wraps the string in an s-expression with that symbol at the head.
+Returns a new readtable based on @racket[base-readtable] that uses @racket[l-paren] and @racket[r-paren] as delimiters to a non-escapable string (with balanced internal delimiters).  If @racket[wrapper] is provided, it wraps the string in an s-expression with that symbol at the head.  If @racket[wrapper] is a function, it will be applied to the syntax object result of reading (the argument will be a syntax object whether @racket[read] or @racket[read-syntax] is used -- the result of @racket[read] is created by using @racket[syntax->datum] on the result of @racket[read-syntax]).
 
 In addition to simply being a nice additional option to make literal strings, it goes great with @racket[stx-string->port] to use in macros that read alternative syntax, such as are used in #lang rash.  Other things you might do are create macros that read interesting surface syntax for different data structures, list comprehensions, or common patterns that you use that would benefit from a different syntax.
 
