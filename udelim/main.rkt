@@ -11,6 +11,7 @@
    (->* (char? char?)
         (#:base-readtable readtable?
          #:wrapper (or/c false/c symbol? procedure?)
+         #:as-dispatch-macro? any/c
          #:string-read-syntax (or/c false/c (-> any/c input-port? any/c))
          #:whole-body-readers? any/c)
         readtable?)]
@@ -18,6 +19,7 @@
    (->* (char? char?)
         (#:base-readtable readtable?
          #:wrapper (or/c false/c symbol? procedure?)
+         #:as-dispatch-macro? any/c
          #:inside-readtable (or/c false/c readtable? 'inherit))
         readtable?)]
   [udelimify (->* ((or/c readtable? false/c)) readtable?)]
@@ -136,27 +138,31 @@
 (define (make-string-delim-readtable l-paren r-paren
                                      #:base-readtable [base-readtable #f]
                                      #:wrapper [wrapper #f]
+                                     #:as-dispatch-macro? [as-dispatch-macro? #f]
                                      #:string-read-syntax [string-read-syntax #f]
                                      #:whole-body-readers? [whole-body-readers? #f])
-  (make-readtable
-   base-readtable
-   l-paren 'terminating-macro (make-string-reader
-                               l-paren r-paren
-                               #:wrapper wrapper
-                               #:string-read-syntax string-read-syntax
-                               #:whole-body-readers? whole-body-readers?)
-   r-paren 'terminating-macro (make-raise-balance-error l-paren r-paren)))
+  (make-readtable base-readtable
+                  l-paren
+                  (if as-dispatch-macro? 'dispatch-macro 'terminating-macro)
+                  (make-string-reader
+                   l-paren r-paren
+                   #:wrapper wrapper
+                   #:string-read-syntax string-read-syntax
+                   #:whole-body-readers? whole-body-readers?)
+                  r-paren 'terminating-macro (make-raise-balance-error l-paren r-paren)))
 
 (define (make-list-delim-readtable l-paren r-paren
                                    #:base-readtable [base-readtable #f]
                                    #:wrapper [wrapper #f]
+                                   #:as-dispatch-macro? [as-dispatch-macro? #f]
                                    #:inside-readtable [inside-readtable 'inherit])
-  (make-readtable
-   base-readtable
-   l-paren 'terminating-macro (make-list-reader l-paren r-paren
-                                                #:wrapper wrapper
-                                                #:inside-readtable inside-readtable)
-   r-paren 'terminating-macro (make-raise-balance-error l-paren r-paren)))
+  (make-readtable base-readtable
+                  l-paren
+                  (if as-dispatch-macro? 'dispatch-macro 'terminating-macro)
+                  (make-list-reader l-paren r-paren
+                                    #:wrapper wrapper
+                                    #:inside-readtable inside-readtable)
+                  r-paren 'terminating-macro (make-raise-balance-error l-paren r-paren)))
 
 
 (define (udelimify table)
@@ -257,12 +263,17 @@
     (make-string-delim-readtable
      #\« #\»
      #:wrapper (λ (stx) (datum->syntax #f (list'#%guillemets2 stx)))))
+  (define guillemet-table/wrap3
+    (make-string-delim-readtable #\« #\» #:wrapper '#%guillemets
+                                 #:as-dispatch-macro? #t))
   (define ceil-table (make-list-delim-readtable #\⌈ #\⌉))
   (define ceil-table/wrap (make-list-delim-readtable #\⌈ #\⌉ #:wrapper '#%ceil))
   (define ceil-table/wrap2
     (make-list-delim-readtable
      #\⌈ #\⌉
      #:wrapper (λ (stx) (datum->syntax #f (cons '#%ceil2 (syntax-e stx))))))
+  (define ceil-table/wrap3 (make-list-delim-readtable #\⌈ #\⌉ #:wrapper '#%ceil
+                                                      #:as-dispatch-macro? #t))
 
   (parameterize ([current-readtable mytable])
     (let ([port (open-input-string "  \"in a string {here\" {hello @{testing 123}foo} }goodbye")])
@@ -288,6 +299,14 @@
                     '(#%guillemets2 "hello @«testing 123»foo"))
       (check-exn exn? (λ () (read-syntax "t2-wrap2" port)))))
 
+  (parameterize ([current-readtable guillemet-table/wrap3])
+    (let ([port (open-input-string "  \"in a string «here\" #«hello @#«testing 123»foo» »goodbye")])
+      (check-equal? (syntax->datum (read-syntax "t2-wrap3" port))
+                    "in a string «here")
+      (check-equal? (syntax->datum (read-syntax "t2-wrap3" port))
+                    '(#%guillemets "hello @#«testing 123»foo"))
+      (check-exn exn? (λ () (read-syntax "t2-wrap3" port)))))
+
   (parameterize ([current-readtable ceil-table])
     (let ([port (open-input-string "{testing ⌈foo bar ⌈⌉ () aoeu⌉ hello} foo")])
       (check-equal? (syntax->datum (read-syntax "t3" port))
@@ -310,6 +329,11 @@
     (let ([port (open-input-string "(testing ⌈foo bar ⌈⌉ () aoeu⌉ hello) foo")])
       (check-equal? (syntax->datum (read-syntax "t4-wrap2" port))
                     '(testing (#%ceil2 foo bar (#%ceil2) () aoeu) hello))))
+
+  (parameterize ([current-readtable ceil-table/wrap3])
+    (let ([port (open-input-string "(testing #⌈foo bar #⌈⌉ () aoeu⌉ hello) foo")])
+      (check-equal? (syntax->datum (read-syntax "t4-wrap3" port))
+                    '(testing (#%ceil foo bar (#%ceil) () aoeu) hello))))
 
   (define weird-table (make-list-delim-readtable #\{ #\} #:inside-readtable mytable))
   (parameterize ([current-readtable weird-table])

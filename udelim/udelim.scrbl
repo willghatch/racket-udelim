@@ -31,6 +31,7 @@ You can use the udelim meta-language (eg. #lang udelim racket/base) to essential
 [l-paren char?]
 [r-paren char?]
 [#:base-readtable base-readtable readtable? #f]
+[#:as-dispatch-macro? as-dispatch-macro? any/c #f]
 [#:wrapper wrapper (or/c false/c symbol? procedure?) #f]
 [#:inside-readtable inside-readtable (or/c false/c readtable? 'inherit) 'inherit])
 readtable?]{
@@ -67,6 +68,8 @@ Be careful with @racket[inside-readtable] -- you can get potentially unexpected 
              (open-input-string "(a b ⟦c d e⟧ f g)")))
 ]
 
+If @racket[as-dispatch-macro?] is true, the extension is added to the readtable as a @racket['dispatch-macro] instead of a @racket['terminating-macro].  This means that there will be a # character before the opening delimiter.
+
 }
 
 
@@ -74,6 +77,7 @@ Be careful with @racket[inside-readtable] -- you can get potentially unexpected 
 [l-paren char?]
 [r-paren char?]
 [#:base-readtable base-readtable readtable? #f]
+[#:as-dispatch-macro? as-dispatch-macro? any/c #f]
 [#:wrapper wrapper (or/c false/c symbol? procedure?) #f]
 [#:string-read-syntax string-read-syntax (or/c false/c (-> any/c input-port? any/c)) #f]
 [#:whole-body-readers? whole-body-readers? any/c #f]
@@ -84,6 +88,8 @@ Returns a new readtable based on @racket[base-readtable] that uses @racket[l-par
 In addition to simply being a nice additional option to make literal strings, it goes great with @racket[stx-string->port] to use in macros that read alternative syntax, such as are used in #lang rash.  Other things you might do are create macros that read interesting surface syntax for different data structures, list comprehensions, or common patterns that you use that would benefit from a different syntax.
 
 If @racket[string-read-syntax] is provided, then it will be applied to the string (transformed into a port with correct location info) to obtain a (probably non-string) syntax object.  If @racket[whole-body-readers?] is true, the function is applied just once to get a syntax object.  Otherwise, the reader is applied repeatedly until it produces an EOF object and the results are placed in a syntax-object-wrapped list.  @racket[string-read-syntax] must be a function that could be used in place of @racket[read-syntax] (IE it must accept two arguments, src and port).  @racket[string-read-syntax] is essentially useful for making non-readtable-based reader extensions where the extension is bounded by the given delimiters.  However, using this will make your inner language still require any nested delimiters to be balanced, so for instance an unbalanced delimiter can't be inside a string in the language of the nested reader.  The tradeoff for needing balanced delimiters is that your inner reader doesn't need to know how to detect its termination character and stop itself -- it will get an EOF from an empty port instead, which can simplify some implementations or allow embedding of whole-file readers that weren't originally intended to be embedded as a readtable extension.  However, most of the time you are probably better off making a read function by hand that detects its closing delimiter itself so users aren't confused about the situation of inner delimiters.  If @racket[wrapper] and @racket[string-read-syntax] are both provided, the @racket[string-read-syntax] function will be applied first.
+
+If @racket[as-dispatch-macro?] is true, the extension is added to the readtable as a @racket['dispatch-macro] instead of a @racket['terminating-macro].  This means that there will be a # character before the opening delimiter.
 
 @examples[#:eval my-evaluator
           (require udelim)
