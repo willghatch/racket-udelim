@@ -33,9 +33,11 @@ You can use the udelim meta-language (eg. #lang udelim racket/base) to essential
 [#:base-readtable base-readtable readtable? #f]
 [#:as-dispatch-macro? as-dispatch-macro? any/c #f]
 [#:wrapper wrapper (or/c false/c symbol? procedure?) #f]
-[#:inside-readtable inside-readtable (or/c false/c readtable? 'inherit) 'inherit])
+[#:inside-readtable inside-readtable
+ (or/c false/c readtable? (-> (or/c false/c readtable?)) 'inherit)
+ 'inherit])
 readtable?]{
-Returns a new readtable based on @racket[base-readtable] that uses @racket[l-paren] and @racket[r-paren] like parenthesis.  IE they read into a list.  If @racket[wrapper] is supplied with a symbol, it is placed at the head of the list.  If @racket[wrapper] is a function, it will be applied to the syntax object result of reading (the argument will be a syntax object whether @racket[read] or @racket[read-syntax] is used -- the result of @racket[read] is created by using @racket[syntax->datum] on the result of @racket[read-syntax]).  If @racket[inside-readtable] is a readtable (including #f), then that readtable is used for the inside of the list.
+Returns a new readtable based on @racket[base-readtable] that uses @racket[l-paren] and @racket[r-paren] like parenthesis.  IE they read into a list.  If @racket[wrapper] is supplied with a symbol, it is placed at the head of the list.  If @racket[wrapper] is a function, it will be applied to the syntax object result of reading (the argument will be a syntax object whether @racket[read] or @racket[read-syntax] is used -- the result of @racket[read] is created by using @racket[syntax->datum] on the result of @racket[read-syntax]).
 
 @examples[#:eval my-evaluator
           (require udelim)
@@ -53,6 +55,8 @@ Returns a new readtable based on @racket[base-readtable] that uses @racket[l-par
             (read
              (open-input-string "(a b ⟦c d e ⟦f g⟧ h i⟧ j k)")))
 ]
+
+The @racket[inside-readtable] argument determines what readtable is used to read elements of the list.  If @racket[inside-readtable] is the symbol @racket['inherit], then the readtable being modified is used.  Beware that that is likely not what you want!  If you call @racket[make-list-delim-readtable] multiple times to add multiple delimiters, you probably want the inner readtable to be the final readtable after all modifications are made (eg. by providing a function that returns the finalized readtable).
 
 Be careful with @racket[inside-readtable] -- you can get potentially unexpected errors by switching the readtable inside a set of parenthesis.  Specifically, if the @racket[inside-readtable] does not treat the parens you are defining specially then you will need a space between any symbol and the closing parenthesis, or the reader will add that character to the symbol!  This is particularly visible if the @racket[inside-readtable] is the base (#f) readtable.  So it is recommended to only use an inside-readtable that has the same parenthesis extensions (though perhaps with more defined, or with other extensions).
 

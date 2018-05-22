@@ -20,7 +20,10 @@
         (#:base-readtable readtable?
          #:wrapper (or/c false/c symbol? procedure?)
          #:as-dispatch-macro? any/c
-         #:inside-readtable (or/c false/c readtable? 'inherit))
+         #:inside-readtable (or/c false/c
+                                  readtable?
+                                  (-> (or/c false/c readtable?))
+                                  'inherit))
         readtable?)]
   [udelimify (->* ((or/c readtable? false/c)) readtable?)]
   [stx-string->port (->* (syntax?) input-port?)]
@@ -105,6 +108,11 @@
        (define (loop stxs-rev)
          (let ([next-ch (read-char port)]
                [inner-readtable (cond
+                                  [(procedure? inside-readtable)
+                                   (let ([rt (inside-readtable)])
+                                     (if (not rt)
+                                         (make-readtable #f)
+                                         rt))]
                                   [(readtable? inside-readtable)
                                    inside-readtable]
                                   [(not inside-readtable)
@@ -341,7 +349,8 @@
       (check-equal? (syntax->datum (read-syntax "t5" port))
                     '(testing a "b c" d))))
 
-  (define weird-table2 (make-list-delim-readtable #\{ #\} #:inside-readtable ceil-table))
+  (define weird-table2 (make-list-delim-readtable
+                        #\{ #\} #:inside-readtable (λ () ceil-table)))
   (parameterize ([current-readtable weird-table2])
     (let ([port (open-input-string "{testing a (b c) d }")])
       (check-equal? (syntax->datum (read-syntax "t6" port))
