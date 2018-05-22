@@ -129,6 +129,8 @@ It's great for using macros that embed code in another syntax:
 
 
 @defproc[(udelimify [table (or/c readtable? false/c)]) readtable?]{
+Unstable.  Added delimiters may change.
+
 Returns the readtable given, but extended with several more delimiters (the same ones as #lang udelim).
 
 Specifically:  «» are nestable non-escaping string delimiters (IE «foo «bar»» reads as "foo «bar»"), ｢｣ are like «» but wrapped so ｢foo bar｣ produces (#%cjk-corner-quotes "foo bar"), ﴾foo bar﴿ reads as (#%ornate-parens foo bar), ⦓foo bar⦔ reads as (#%inequality-brackets foo bar), ⦕foo bar⦖ reads as (#%double-inequality-brackets foo bar), 🌜foo bar🌛 reads as (#%moon-faces foo bar), and ⟅foo bar⟆ reads as (#%s-shaped-bag-delim foo bar).
@@ -138,6 +140,8 @@ To get default meanings for the #% identifiers (currently mostly pass-through ma
 }
 
 @defproc[(stx-string->port [stx syntax?]) input-port?]{
+Unstable.  This doesn't really fit with the rest of the package, and could be moved to another module or package.
+
 @racket[stx] should only contain a string.  The location data on @racket[stx] is used to give the resulting port accurate location information when it is read.  This is useful for creating macros that allow embedding of alternate syntax, such as #lang rash does.
 
 When you use @racket[read-syntax] on the resulting port, the syntax objects will have correct location information, but will be lacking lexical context.  To fix this, use @racket[replace-context].
@@ -151,6 +155,8 @@ When you use @racket[read-syntax] on the resulting port, the syntax objects will
 }
 
 @defproc[(scribble-strings->string [stx syntax?]) syntax?]{
+Unstable.  This doesn't really fit with the rest of the package, and could be moved to another module or package.
+
 Takes a syntax object that represents a list of strings created by the scribble reader, and reconstitutes them into one string.  If the syntax contains anything that is not a string, it raises an error.
 
 This makes it easier for a sub-parsing macro to accept input either from the scribble reader or from a string (including the wonderful verbatim strings with nestable delimiters made with @racket[make-string-delim-readtable]).
