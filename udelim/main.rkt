@@ -90,7 +90,11 @@
                                      (inner-read-syntax src
                                                         (stx-string->port str-stx))
                                      str-stx)])
-                  (cond [(symbol? wrapper) (datum->syntax #f (list wrapper read-stx))]
+                  (cond [(symbol? wrapper)
+                         (datum->syntax
+                          #f (list (datum->syntax #f wrapper
+                                                  (list src line col pos span))
+                                   read-stx))]
                         [(procedure? wrapper) (wrapper read-stx)]
                         [else read-stx]))]))
        (loop ch 0 '())]))
@@ -128,8 +132,13 @@
               (loop stxs-rev)]
              [(equal? next-ch r-paren)
               (let ([unwrapped (reverse stxs-rev)])
-                (cond [(symbol? wrapper) (datum->syntax #f (cons wrapper unwrapped))]
-                      [(procedure? wrapper) (wrapper (datum->syntax #f unwrapped))]
+                (cond [(symbol? wrapper)
+                       (datum->syntax
+                        #f (cons (datum->syntax #f wrapper (list src line col pos 0))
+                                 unwrapped))]
+                      [(procedure? wrapper)
+                       (wrapper (datum->syntax #f unwrapped
+                                               (list src line col pos 0)))]
                       [else (datum->syntax #f unwrapped)]))]
              [else
               (let ([one-stx (parameterize
