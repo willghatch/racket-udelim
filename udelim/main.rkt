@@ -131,7 +131,8 @@
 
               (loop stxs-rev)]
              [(equal? next-ch r-paren)
-              (let ([unwrapped (reverse stxs-rev)])
+              (let ([unwrapped (reverse (filter (λ (x) (not (special-comment? x)))
+                                                stxs-rev))])
                 (cond [(symbol? wrapper)
                        (datum->syntax
                         #f (cons (datum->syntax #f wrapper (list src line col pos 0))
@@ -326,6 +327,17 @@
 
   (parameterize ([current-readtable ceil-table])
     (let ([port (open-input-string "{testing ⌈foo bar ⌈⌉ () aoeu⌉ hello} foo")])
+      (check-equal? (syntax->datum (read-syntax "t3" port))
+                    '(testing (foo bar () () aoeu) hello))))
+
+  (parameterize ([current-readtable ceil-table])
+    (let ([port (open-input-string "{testing ⌈foo bar ⌈#|hi|#⌉ () aoeu⌉ hello} foo")])
+      (check-equal? (syntax->datum (read-syntax "t3" port))
+                    '(testing (foo bar () () aoeu) hello))))
+
+  (parameterize ([current-readtable ceil-table])
+    (let ([port (open-input-string "{testing ⌈foo bar ⌈;;testing
+⌉ () aoeu⌉ hello} foo")])
       (check-equal? (syntax->datum (read-syntax "t3" port))
                     '(testing (foo bar () () aoeu) hello))))
 
